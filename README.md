@@ -15,8 +15,9 @@
 ```powershell
 [CmdletBinding()]
 param(
-  [ValidateSet(8,9)]
-  [int]$RockyMajor = 9,
+  # "9" 또는 "8" → pub 경로 최신(latest)
+  # "9.6", "9.4", "8.10" → vault 경로 고정
+  [string]$RockyVersion = "9",
 
   [ValidateSet("Base","Minimal","UBI")]
   [string]$Variant = "Base",
@@ -32,6 +33,7 @@ param(
   [bool]$SkipUpdate = $false
 )
 ```
+
 - `UBI` : `Universal Base Image` 레드햇(RHEL)과 호환되는 범용 베이스 이미지. 컨테이너 환경(Docker, Podman 등)에서 사용하기 위해 제공.
 
 - 주요 버전 비교 표 (Rocky vs RHEL)
