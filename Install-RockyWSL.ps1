@@ -1,15 +1,19 @@
 <#
-  Rocky Linux를 WSL에 자동 설치/등록하는 스크립트 (최종: Base64 전달 + printf로 wsl.conf 작성)
+  Install-RockyWSL.ps1
+  --------------------
+  Rocky Linux를 WSL에 자동 설치/등록하는 스크립트
   - rootfs(.tar.xz) 다운로드 → wsl --import 등록(WSL2)
   - 패키지 매니저 자동 감지(dnf 또는 microdnf) → 업데이트/기본 툴 설치
   - 사용자 생성/기본 사용자 설정 → /etc/wsl.conf(systemd 포함)
   - .tar.xz import 실패 시 .tar 변환 후 재시도
+  - RockyVersion 파라미터 하나로 최신(latest) 및 고정(vault) 모두 지원
 #>
 
 [CmdletBinding()]
 param(
-  [ValidateSet(8,9)]
-  [int]$RockyMajor = 9,
+  # "9" 또는 "8" → pub 경로 최신(latest)
+  # "9.6", "9.4", "8.10" → vault 경로 고정
+  [string]$RockyVersion = "9",
 
   [ValidateSet("Base","Minimal","UBI")]
   [string]$Variant = "Base",
@@ -32,11 +36,34 @@ function Write-OK($msg)    { Write-Host "[완료] $msg" -ForegroundColor Green }
 function Write-Warn($msg)  { Write-Host "[주의] $msg" -ForegroundColor Yellow }
 function Write-Err($msg)   { Write-Host "[오류] $msg" -ForegroundColor Red }
 
-function Get-DownloadInfo([int]$Major, [string]$Var) {
-  $baseUrl = "https://dl.rockylinux.org/pub/rocky/$Major/images/x86_64"
-  $stem    = "Rocky-$Major-Container-$Var.latest.x86_64"
-  $xzName  = "$stem.tar.xz"
+# RockyVersion 해석: "9" / "8" → pub 최신, "9.6" 등 → vault 고정
+function Resolve-RockyChannel([string]$Version, [string]$Var) {
+  $isMinorPinned = $Version -match '^\d+\.\d+$'
+  $isMajorOnly   = $Version -match '^\d+$'
+
+  if (-not ($isMinorPinned -or $isMajorOnly)) {
+    throw "RockyVersion 형식 오류: '$Version' (예: '9', '8', '9.6', '8.10')"
+  }
+
+  if ($isMinorPinned) {
+    $major = [int]($Version.Split('.')[0])
+    if ($major -notin @(8,9)) { throw "지원 메이저는 8 또는 9입니다. 입력: $major" }
+    $baseUrl = "https://dl.rockylinux.org/vault/rocky/$Version/images/x86_64"
+    $mode = "vault"
+  } else {
+    $major = [int]$Version
+    if ($major -notin @(8,9)) { throw "지원 메이저는 8 또는 9입니다. 입력: $major" }
+    $baseUrl = "https://dl.rockylinux.org/pub/rocky/$major/images/x86_64"
+    $mode = "pub"
+  }
+
+  $stem   = "Rocky-$major-Container-$Var.latest.x86_64"
+  $xzName = "$stem.tar.xz"
+
   [PSCustomObject]@{
+    Mode      = $mode
+    Major     = $major
+    Version   = $Version
     BaseUrl   = $baseUrl
     FileStem  = $stem
     TarXzName = $xzName
@@ -87,9 +114,12 @@ if (-not (Test-Path $InstallPath)) { New-Item -ItemType Directory -Force -Path $
 try { $existing = wsl -l -q | Where-Object { $_ -eq $DistroName } } catch { $existing=$null }
 if ($existing) { Write-Err "이미 동일 이름의 배포판 존재: $DistroName"; exit 1 }
 
-# rootfs 다운로드 및 등록
-$info = Get-DownloadInfo -Major $RockyMajor -Var $Variant
+# 채널/URL 결정 및 다운로드
+$info = Resolve-RockyChannel -Version $RockyVersion -Var $Variant
+Write-Info ("다운로드 채널: {0} (요청='{1}')" -f $info.Mode, $info.Version)
 $tarXzPath = Download-Rootfs -info $info -tempDir $TempDir
+
+# import
 Import-WSL -Distro $DistroName -Path $InstallPath -TarXzPath $tarXzPath
 
 # 초기화 스크립트 (bash) — Base64 전달, /etc/wsl.conf는 printf로 작성
@@ -129,14 +159,14 @@ if ! id -u "$Username" >/dev/null 2>&1; then
   chage -d 0 "$Username" || true
 fi
 
-# /etc/wsl.conf 백업 및 덮어쓰기(가장 안전한 방식)
+# /etc/wsl.conf 백업 및 덮어쓰기
 [ -f /etc/wsl.conf ] && cp -f /etc/wsl.conf /etc/wsl.conf.bak || true
 printf '%s\n' "[user]" "default = $Username" "" "[boot]" "systemd = $ENABLE_SYSTEMD" > /etc/wsl.conf
 
 echo "[완료] 초기화 끝. PowerShell에서 'wsl --shutdown' 후 다시 접속하세요."
 "@
 
-# Base64로 인코딩 후 WSL 내부에서 실행 (CRLF 방지)
+# Base64로 인코딩 후 WSL 내부에서 실행
 $bytes = [System.Text.Encoding]::UTF8.GetBytes(($initScript -replace "`r`n","`n").Replace("`r","`n"))
 $b64   = [Convert]::ToBase64String($bytes)
 
