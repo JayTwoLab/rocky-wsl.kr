@@ -1,6 +1,8 @@
-# rocky-wsl
+# `rocky-wsl`
 
-- Rocky Linux setting for WSL
+- `WSL` 을 위한 `Rocky` 리눅스 설정
+
+<br />
 
 ---
 
@@ -51,6 +53,8 @@ param(
 | **Rocky 9.1, 9.2, 9.3 등**        | 이후 9 계열의 마이너 릴리스 연속           | 대응 RHEL 9의 마이너 릴리스   | —                                 | 동일 (9 계열 지원 기간 내)  | 예: RHEL 9.3은 2023년 11월 7일에 나왔고, Rocky 9.3은 11월 20일에 나옴  |
 | **Rocky 10.0 ("Red Quartz")**    | 2025년 6월 11일    | RHEL 10 (커널 6.12 기반)   | —                      | 예정 (Rocky 10 지원 ~ 2035년까지)   | — |      
 
+<br />
+
 ---
 
 - 로키 리눅스의 디폴트 계정은 root 이며, 다음과 같은 설정으로 계정을 추가할 수 있다.
@@ -78,6 +82,8 @@ wsl --shutdown
 wsl -d RockyLinux
 
 ```
+
+<br />
 
 ---
 
