@@ -7,8 +7,47 @@
 - 파워쉘에서 스크립트 실행
 
 ```
-PS C:\workspace\wsl\rocky> .\Install-RockyWSL.ps1
+ PS C:\workspace\wsl\rocky> .\Install-RockyWSL.ps1
 ```
+
+- 실행 전 다음 필드들을 조정하여 설정
+
+```powershell
+[CmdletBinding()]
+param(
+  [ValidateSet(8,9)]
+  [int]$RockyMajor = 9,
+
+  [ValidateSet("Base","Minimal","UBI")]
+  [string]$Variant = "Base",
+
+  [string]$DistroName = "RockyLinux",
+
+  [string]$InstallPath = "C:\WSL\Rocky",
+
+  [string]$Username = "rocky",
+
+  [bool]$EnableSystemd = $true,
+
+  [bool]$SkipUpdate = $false
+)
+```
+- `UBI` : `Universal Base Image` 레드햇(RHEL)과 호환되는 범용 베이스 이미지. 컨테이너 환경(Docker, Podman 등)에서 사용하기 위해 제공.
+
+- 주요 버전 비교 표 (Rocky vs RHEL)
+
+| Rocky 버전                         | 출격 릴리스 날짜                           | 대응 RHEL 버전 / 릴리스 날짜                                 | 주요 커널 / 특징             | 지원 종료 / EOL (Rocky 기준)                               | 비고 / 지연일 등                                                                  |
+| -------------------------------- | ----------------------------------- | --------------------------------------------------- | ---------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Rocky 8.4 ("Green Obsidian")** | 2021년 6월 21일 ([Zenarmor][1])        | RHEL 8.4 (2021년 5월 18일) ([위키백과][2])                 | 커널 4.18 계열             | Rocky 8은 2029년 5월까지 보안 지원 ([wiki.rockylinux.org][3]) | 릴리스 지연 약 34일 정도 ([wiki.rockylinux.org][3])                                  |
+| **Rocky 8.5**                    | 2021년 11월 15일 ([위키백과][4])           | RHEL 8.5 (2021년 11월 9일) ([wiki.rockylinux.org][3])  | —                      | 동일 (8 계열 지원)                                         | 지연 약 6일 ([위키백과][4])                                                         |
+| **Rocky 8.6**                    | 2022년 5월 16일 ([위키백과][4])            | RHEL 8.6 (2022년 5월 10일) ([wiki.rockylinux.org][3])  | —                      | 동일                                                   | 지연 약 6일 ([위키백과][4])                                                         |
+| **Rocky 8.7**                    | 2022년 11월 14일 ([rockylinux.org][5]) | RHEL 8.7 (2022년 11월 9일) ([wiki.rockylinux.org][3])  | —                      | 동일                                                   | 지연 약 5일 ([위키백과][4])                                                         |
+| **Rocky 8.8**                    | 2023년 5월 20일 ([rockylinux.org][6])  | RHEL 8.8 (2023년 5월 16일) ([wiki.rockylinux.org][3])  | —                      | 동일                                                   | 지연 약 4일 ([위키백과][4])                                                         |
+| **Rocky 8.9**                    | 2023년 11월 22일 ([rockylinux.org][7]) | RHEL 8.9 (2023년 11월 14일) ([openlogic.com][8])       | —                      | 동일                                                   | 지연 약 8일 ([위키백과][4])                                                         |
+| **Rocky 8.10**                   | 2024년 5월 30일 ([rockylinux.org][9])  | RHEL 8.10 (2024년 5월 22일 / 23일) ([openlogic.com][8]) | —                      | 보안 지원은 2029년까지 (8 계열) ([wiki.rockylinux.org][3])     | 이 버전이 8 계열의 마지막 마이너 릴리스임 (Rocky 8.11은 없음) ([rockylinux.org][9])             |
+| **Rocky 9.0 ("Blue Onyx")**      | 2022년 7월 14일 ([위키백과][2])            | RHEL 9.0 (2022년 5월 17일) ([위키백과][2])                 | 커널 5.14 계열 ([위키백과][2]) | Rocky 9은 2032년 5월까지 지원 예정 ([위키백과][2])                | 릴리스 지연 약 58일 ([위키백과][4])                                                    |
+| **Rocky 9.1, 9.2, 9.3 등**        | 이후 9 계열의 마이너 릴리스 연속                 | 대응 RHEL 9의 마이너 릴리스                                  | —                      | 동일 (9 계열 지원 기간 내)                                    | 예: RHEL 9.3은 2023년 11월 7일에 나왔고, Rocky 9.3은 11월 20일에 나옴 ([openlogic.com][8]) |
+| **Rocky 10.0 ("Red Quartz")**    | 2025년 6월 11일 ([위키백과][2])            | RHEL 10 (커널 6.12 기반)                                | —                      | 예정 (Rocky 10 지원 ~ 2035년까지) ([위키백과][2])               | —       
 
 ---
 
