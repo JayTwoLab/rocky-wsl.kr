@@ -1,5 +1,7 @@
 # `rocky-wsl`
 
+> This document is written in Korean. :kr:
+
 - `WSL` 을 위한 `Rocky` 리눅스 설정
 
 <br />
