@@ -11,16 +11,16 @@
 
 [CmdletBinding()]
 param(
-  # "9" or "8" → pub path latest
-  # "9.6", "9.4", "8.10" → vault path fixed
+  # RockyLinux version "9" or "8" → pub path latest
+  # RockyLinux version "9.6", "9.4", "8.10" → vault path fixed
   [string]$RockyVersion = "9",
 
   [ValidateSet("Base","Minimal","UBI")]
   [string]$Variant = "Base",
 
-  [string]$DistroName = "RockyLinux",
+  [string]$DistroName = "Rocky9",
 
-  [string]$InstallPath = "C:\WSL\Rocky",
+  [string]$InstallPath = "C:\WSL\Rocky9",
 
   [string]$Username = "rocky",
 
@@ -117,6 +117,13 @@ function Import-WSL([string]$Distro, [string]$Path, [string]$TarXzPath) {
 
 # Check paths and duplicates
 $TempDir = Join-Path $env:TEMP "rocky-wsl"
+
+# Remove any cache directories left from previous runs
+if (Test-Path $TempDir) {
+  Write-Info "Removing existing cache directory: $TempDir"
+  Remove-Item -Recurse -Force $TempDir
+}
+
 $null = New-Item -ItemType Directory -Force -Path $TempDir | Out-Null
 if (-not (Test-Path $InstallPath)) { New-Item -ItemType Directory -Force -Path $InstallPath | Out-Null }
 try { $existing = wsl -l -q | Where-Object { $_ -eq $DistroName } } catch { $existing=$null }
