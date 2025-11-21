@@ -1,111 +1,98 @@
 # `rocky-wsl`
 
-> This document is written in Korean. :kr:
+> [English](README.md), [Korean](README.ko.md)
 
-- `WSL` 을 위한 `Rocky` 리눅스 설정
-- `WSL2` 이상을 사용할 것
-
-<br />
+- Rocky Linux setup for `WSL`
+- Use `WSL2` or higher
 
 ---
 
-- 파워쉘에서 스크립트 실행
+- Run the script in PowerShell:
 
 ```
- PS C:\workspace\wsl\rocky> .\Install-RockyWSL.ps1
+PS C:\workspace\wsl\rocky> .\Install-RockyWSL.ps1
 ```
 
-- 실행 전 다음 필드들을 조정하여 설정
-   ```powershell
-      [CmdletBinding()]
-      param(
-        # "9" 또는 "8" → pub 경로 최신(latest)
-        # "9.6", "9.4", "8.10" → vault 경로 고정
-        [string]$RockyVersion = "9",
-      
-        [ValidateSet("Base","Minimal","UBI")]
-        [string]$Variant = "Base",
-      
-        [string]$DistroName = "RockyLinux",
-      
-        [string]$InstallPath = "C:\WSL\Rocky",
-      
-        [string]$Username = "rocky",
-      
-        [bool]$EnableSystemd = $true,
-      
-        [bool]$SkipUpdate = $false
-      )
-   ```
-   - `UBI` : `Universal Base Image` 레드햇(RHEL)과 호환되는 범용 베이스 이미지. 컨테이너 환경(Docker, Podman 등)에서 사용하기 위해 제공.
+- Adjust the following fields before execution:
 
-- 주요 버전 비교 표 (`Rocky` vs `RHEL`)
+```powershell
+[CmdletBinding()]
+param(
+  # "9" or "8" → latest pub path
+  # "9.6", "9.4", "8.10" → fixed vault path
+  [string]$RockyVersion = "9",
 
-| Rocky 버전           | 출격 릴리스 날짜        | 대응 RHEL 버전 / 릴리스 날짜     | 주요 커널 / 특징       | 지원 종료 / EOL (Rocky 기준)       | 비고 / 지연일 등                               |
-| -------------------- | ----------------------- | -------------------------------- | ---------------------- | --------------------------------- | ---------------------------------------------- |
-| **Rocky 8.4** <br /> ("Green Obsidian") | 2021-06-21   | RHEL 8.4 <br/> (21 5 18)  | 커널 4.18 계열          | Rocky 8은 2029년 5월까지 보안 지원  | 릴리스 지연 약 34일 정도                        |
-| **Rocky 8.5**                    | 2021-11-15  | RHEL 8.5 <br/> (21 11 9)  | —                      | 동일 (8 계열 지원)                  | 지연 약 6일                                    |
-| **Rocky 8.6**                    | 2022-05-16   | RHEL 8.6 <br/> (22 5 10)  | —                      | 동일                               | 지연 약 6일                                    |
-| **Rocky 8.7**                    | 2022-11-14  | RHEL 8.7 <br/> (22 11 9)  | —                      | 동일                               | 지연 약 5일                                    |
-| **Rocky 8.8**                    | 2023-05-20   | RHEL 8.8 <br/> (23 5 16)  | —                      | 동일                               | 지연 약 4일                                    |
-| **Rocky 8.9**                    | 2023-11-22  | RHEL 8.9 <br/> (23 11 14)  | —                      | 동일                               | 지연 약 8일                                    |
-| **Rocky 8.10**                   | 2024-05-30   | RHEL 8.10 <br/> (24 5 23)  | —                      | 보안 지원은 2029년까지 (8 계열)     | 이 버전이 8 계열의 마지막 마이너 릴리스임 (Rocky 8.11은 없음)  |
-| **Rocky 9.0** <br /> ("Blue Onyx")      | 2022-07-14   | RHEL 9.0 <br/> (22 5 17)  | 커널 5.14 계열          | Rocky 9은 2032년 5월까지 지원 예정  | 릴리스 지연 약 58일                            |
-| **Rocky 9.1, 9.2, 9.3 등**       | 이후 9 계열의 마이너 릴리스 연속     | 대응 RHEL 9의 마이너 릴리스   | —                                 | 동일 (9 계열 지원 기간 내)  | 예: RHEL 9.3은 2023년 11월 7일에 나왔고, Rocky 9.3은 11월 20일에 나옴  |
-| **Rocky 10.0** <br /> ("Red Quartz")  | 2025-06-11    | RHEL 10 <br/> (커널 6.12 기반)   | —                      | 예정 (Rocky 10 지원 ~ 2035년까지)   | — |      
+  [ValidateSet("Base","Minimal","UBI")]
+  [string]$Variant = "Base",
 
-<br />
+  [string]$DistroName = "RockyLinux",
+
+  [string]$InstallPath = "C:\WSL\Rocky",
+
+  [string]$Username = "rocky",
+
+  [bool]$EnableSystemd = $true,
+
+  [bool]$SkipUpdate = $false
+)
+```
+
+- `UBI`: Universal Base Image compatible with Red Hat (RHEL). Intended for container environments (Docker, Podman, etc.).
 
 ---
 
-- 로키 리눅스의 디폴트 계정은 root 이며, 다음과 같은 설정으로 계정을 추가할 수 있다.
+## Major version comparison table (`Rocky` vs `RHEL`)
+
+| Rocky Version | Release Date | Corresponding RHEL Version / Release Date | Main Kernel / Features | End of Support / EOL (Rocky) | Notes |
+|--------------|---------------|-------------------------------------------|-------------------------|-------------------------------|-------|
+| **Rocky 8.4** (“Green Obsidian”) | 2021-06-21 | RHEL 8.4 (2021-05-18) | Kernel 4.18 | Security support until May 2029 | Release delayed by about 34 days |
+| **Rocky 8.5** | 2021-11-15 | RHEL 8.5 (2021-11-09) | — | Same | Delay about 6 days |
+| **Rocky 8.6** | 2022-05-16 | RHEL 8.6 (2022-05-10) | — | Same | Delay about 6 days |
+| **Rocky 8.7** | 2022-11-14 | RHEL 8.7 (2022-11-09) | — | Same | Delay about 5 days |
+| **Rocky 8.8** | 2023-05-20 | RHEL 8.8 (2023-05-16) | — | Same | Delay about 4 days |
+| **Rocky 8.9** | 2023-11-22 | RHEL 8.9 (2023-11-14) | — | Same | Delay about 8 days |
+| **Rocky 8.10** | 2024-05-30 | RHEL 8.10 (2024-05-23) | — | Security support until 2029 | Last minor release of 8 series |
+| **Rocky 9.0** (“Blue Onyx”) | 2022-07-14 | RHEL 9.0 (2022-05-17) | Kernel 5.14 | Support planned until May 2032 | Delay about 58 days |
+| **Rocky 9.x** | Ongoing | Corresponding RHEL minor releases | — | Same | Example: RHEL 9.3 (2023-11-07), Rocky 9.3 (2023-11-20) |
+| **Rocky 10.0** (“Red Quartz”) | 2025-06-11 | RHEL 10 (Kernel 6.12) | — | Support planned until ~2035 | — |
+
+---
+
+## Default account settings
 
 ```bash
-
-# 홈 디렉터리(-m), 기본 셸(-s /bin/bash) 지정
+# Create home directory (-m) and default shell (/bin/bash)
 useradd -m -s /bin/bash j2
 
-# 비밀번호 설정
+# Set password
 passwd j2
 
-# sudo 권한 부여
+# Grant sudo privileges
 usermod -aG wheel j2
 
-# WSL 기본 사용자 변경
-vim /etc/wsl.conf 
+# Change default WSL user
+vim /etc/wsl.conf
 
-# 아래 내용 추가
+# Add this:
 [user]
 default=j2
 
-# PowerShell에서 WSL을 완전히 종료 후 다시 실행:
+# Restart WSL from PowerShell:
 wsl --shutdown
 wsl -d RockyLinux
-
 ```
-
-<br />
 
 ---
 
-- 개발 도구 설치
+## Install development tools
 
 ```bash
-
-# 시스템 업데이트
+# Update system
 sudo dnf update -y
 
-# Development Tools 그룹 설치 (gcc, g++, make, gdb 등 포함)
+# Install Development Tools group
 sudo dnf groupinstall -y "Development Tools"
 
-# 추가 C++ 라이브러리와 헤더 (C++17 이상 개발 시 자주 필요)
+# Additional packages for C++17+
 sudo dnf install -y gcc-c++ cmake ninja-build git
-
 ```
-
-
-
-
-
-
-

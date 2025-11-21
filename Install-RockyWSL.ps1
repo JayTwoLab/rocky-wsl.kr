@@ -1,18 +1,18 @@
 <#
   Install-RockyWSL.ps1
   --------------------
-  Rocky Linux를 WSL에 자동 설치/등록하는 스크립트
-  - rootfs(.tar.xz) 다운로드 → wsl --import 등록(WSL2)
-  - 패키지 매니저 자동 감지(dnf 또는 microdnf) → 업데이트/기본 툴 설치
-  - 사용자 생성/기본 사용자 설정 → /etc/wsl.conf(systemd 포함)
-  - .tar.xz import 실패 시 .tar 변환 후 재시도
-  - RockyVersion 파라미터 하나로 최신(latest) 및 고정(vault) 모두 지원
+  Script to automatically install/register Rocky Linux in WSL
+  - Download rootfs(.tar.xz) → Register with wsl --import (WSL2)
+  - Auto-detect package manager (dnf or microdnf) → Update/install basic tools
+  - Create user/set default user → /etc/wsl.conf (including systemd)
+  - If .tar.xz import fails, convert to .tar and retry
+  - Support both latest (pub) and fixed (vault) versions with single RockyVersion parameter
 #>
 
 [CmdletBinding()]
 param(
-  # "9" 또는 "8" → pub 경로 최신(latest)
-  # "9.6", "9.4", "8.10" → vault 경로 고정
+  # "9" or "8" → pub path latest
+  # "9.6", "9.4", "8.10" → vault path fixed
   [string]$RockyVersion = "9",
 
   [ValidateSet("Base","Minimal","UBI")]
@@ -31,28 +31,28 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Write-Info($msg)  { Write-Host "[정보] $msg" -ForegroundColor Cyan }
-function Write-OK($msg)    { Write-Host "[완료] $msg" -ForegroundColor Green }
-function Write-Warn($msg)  { Write-Host "[주의] $msg" -ForegroundColor Yellow }
-function Write-Err($msg)   { Write-Host "[오류] $msg" -ForegroundColor Red }
+function Write-Info($msg)  { Write-Host "[INFO] $msg" -ForegroundColor Cyan }
+function Write-OK($msg)    { Write-Host "[OK] $msg" -ForegroundColor Green }
+function Write-Warn($msg)  { Write-Host "[WARN] $msg" -ForegroundColor Yellow }
+function Write-Err($msg)   { Write-Host "[ERROR] $msg" -ForegroundColor Red }
 
-# RockyVersion 해석: "9" / "8" → pub 최신, "9.6" 등 → vault 고정
+# Parse RockyVersion: "9" / "8" → pub latest, "9.6" etc → vault fixed
 function Resolve-RockyChannel([string]$Version, [string]$Var) {
   $isMinorPinned = $Version -match '^\d+\.\d+$'
   $isMajorOnly   = $Version -match '^\d+$'
 
   if (-not ($isMinorPinned -or $isMajorOnly)) {
-    throw "RockyVersion 형식 오류: '$Version' (예: '9', '8', '9.6', '8.10')"
+    throw "RockyVersion format error: '$Version' (e.g., '9', '8', '9.6', '8.10')"
   }
 
   if ($isMinorPinned) {
     $major = [int]($Version.Split('.')[0])
-    if ($major -notin @(8,9)) { throw "지원 메이저는 8 또는 9입니다. 입력: $major" }
+    if ($major -notin @(8,9)) { throw "Supported major versions are 8 or 9. Input: $major" }
     $baseUrl = "https://dl.rockylinux.org/vault/rocky/$Version/images/x86_64"
     $mode = "vault"
   } else {
     $major = [int]$Version
-    if ($major -notin @(8,9)) { throw "지원 메이저는 8 또는 9입니다. 입력: $major" }
+    if ($major -notin @(8,9)) { throw "Supported major versions are 8 or 9. Input: $major" }
     $baseUrl = "https://dl.rockylinux.org/pub/rocky/$major/images/x86_64"
     $mode = "pub"
   }
@@ -74,22 +74,24 @@ function Resolve-RockyChannel([string]$Version, [string]$Var) {
 function Download-Rootfs($info, $tempDir) {
   $tarXzPath = Join-Path $tempDir $info.TarXzName
   if (-not (Test-Path $tarXzPath)) {
-    Write-Info "rootfs 다운로드 중: $($info.Url)"
+    Write-Info "Downloading rootfs: $($info.Url)"
     Invoke-WebRequest -Uri $info.Url -OutFile $tarXzPath -UseBasicParsing
-    Write-OK "rootfs 다운로드 완료: $tarXzPath"
+    Write-OK "Rootfs download complete: $tarXzPath"
   } else {
-    Write-Info "기존에 다운로드된 rootfs를 사용합니다: $tarXzPath"
+    Write-Info "Using previously downloaded rootfs: $tarXzPath"
   }
   return $tarXzPath
 }
 
 function Import-WSL([string]$Distro, [string]$Path, [string]$TarXzPath) {
-  Write-Info "WSL 배포판 등록 시도: $Distro → $Path"
-  try {
-    wsl --import "$Distro" "$Path" "$TarXzPath" --version 2
-    Write-OK "WSL 배포판 등록 완료(.tar.xz): $Distro"
-  } catch {
-    Write-Warn "압축 파일(.tar.xz) import 실패. .tar 변환 후 재시도합니다."
+  Write-Info "Attempting to register WSL distribution: $Distro → $Path"
+  
+  wsl --import "$Distro" "$Path" "$TarXzPath" --version 2 2>$null
+  
+  if ($LASTEXITCODE -eq 0) {
+    Write-OK "WSL distribution registered successfully (.tar.xz): $Distro"
+  } else {
+    Write-Warn "Failed to import compressed file (.tar.xz). Converting to .tar and retrying."
     $tempDir    = Split-Path $TarXzPath -Parent
     $extractDir = Join-Path $tempDir "rootfs_extract"
     $tarPath    = Join-Path $tempDir ((Split-Path $TarXzPath -Leaf) -replace '\.tar\.xz$','.tar')
@@ -98,31 +100,37 @@ function Import-WSL([string]$Distro, [string]$Path, [string]$TarXzPath) {
     New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
 
     & tar -C $extractDir -xJf $TarXzPath
+    if ($LASTEXITCODE -ne 0) { throw "Failed to extract .tar.xz file" }
+    
     if (Test-Path $tarPath) { Remove-Item -Force $tarPath }
     Push-Location $extractDir
-    try { & tar -cf $tarPath * } finally { Pop-Location }
+    try { 
+      & tar -cf $tarPath *
+      if ($LASTEXITCODE -ne 0) { throw "Failed to create .tar file" }
+    } finally { Pop-Location }
 
     wsl --import "$Distro" "$Path" "$tarPath" --version 2
-    Write-OK "WSL 배포판 등록 완료(.tar 변환): $Distro"
+    if ($LASTEXITCODE -ne 0) { throw "Failed to import .tar file to WSL" }
+    Write-OK "WSL distribution registered successfully (.tar conversion): $Distro"
   }
 }
 
-# 경로 및 중복 확인
+# Check paths and duplicates
 $TempDir = Join-Path $env:TEMP "rocky-wsl"
 $null = New-Item -ItemType Directory -Force -Path $TempDir | Out-Null
 if (-not (Test-Path $InstallPath)) { New-Item -ItemType Directory -Force -Path $InstallPath | Out-Null }
 try { $existing = wsl -l -q | Where-Object { $_ -eq $DistroName } } catch { $existing=$null }
-if ($existing) { Write-Err "이미 동일 이름의 배포판 존재: $DistroName"; exit 1 }
+if ($existing) { Write-Err "Distribution with the same name already exists: $DistroName"; exit 1 }
 
-# 채널/URL 결정 및 다운로드
+# Determine channel/URL and download
 $info = Resolve-RockyChannel -Version $RockyVersion -Var $Variant
-Write-Info ("다운로드 채널: {0} (요청='{1}')" -f $info.Mode, $info.Version)
+Write-Info ("Download channel: {0} (Requested='{1}')" -f $info.Mode, $info.Version)
 $tarXzPath = Download-Rootfs -info $info -tempDir $TempDir
 
 # import
 Import-WSL -Distro $DistroName -Path $InstallPath -TarXzPath $tarXzPath
 
-# 초기화 스크립트 (bash) — Base64 전달, /etc/wsl.conf는 printf로 작성
+# Initialization script (bash) — Base64 transfer, /etc/wsl.conf written with printf
 $EnableSystemdStr = if ($EnableSystemd) { "true" } else { "false" }
 $SkipUpdateStr    = if ($SkipUpdate)    { "true" } else { "false" }
 
@@ -132,26 +140,26 @@ set -e
 SKIP_UPDATE="$SkipUpdateStr"
 ENABLE_SYSTEMD="$EnableSystemdStr"
 
-# 패키지 매니저 자동 감지
+# Auto-detect package manager
 PKG=""
 if command -v dnf >/dev/null 2>&1; then
   PKG="dnf"
 elif command -v microdnf >/dev/null 2>&1; then
   PKG="microdnf"
 else
-  echo "[오류] dnf/microdnf 없음"
+  echo "[ERROR] dnf/microdnf not found"
   exit 1
 fi
 
-# 업데이트/기본 툴 설치
+# Update/install basic tools
 if [ "\$SKIP_UPDATE" != "true" ]; then
   \$PKG -y update || true
 fi
 
-# 일부 이미지에 useradd가 없을 수 있어 shadow-utils 포함
+# Include shadow-utils as some images may not have useradd
 \$PKG -y install sudo passwd which vim curl git shadow-utils || true
 
-# 일반 사용자 생성 및 wheel 부여
+# Create regular user and grant wheel access
 if ! id -u "$Username" >/dev/null 2>&1; then
   useradd -m -s /bin/bash "$Username" || true
   echo "$Username:changeme" | chpasswd || true
@@ -159,23 +167,23 @@ if ! id -u "$Username" >/dev/null 2>&1; then
   chage -d 0 "$Username" || true
 fi
 
-# /etc/wsl.conf 백업 및 덮어쓰기
+# Backup and overwrite /etc/wsl.conf
 [ -f /etc/wsl.conf ] && cp -f /etc/wsl.conf /etc/wsl.conf.bak || true
 printf '%s\n' "[user]" "default = $Username" "" "[boot]" "systemd = $ENABLE_SYSTEMD" > /etc/wsl.conf
 
-echo "[완료] 초기화 끝. PowerShell에서 'wsl --shutdown' 후 다시 접속하세요."
+echo "[DONE] Initialization complete. Run 'wsl --shutdown' in PowerShell and reconnect."
 "@
 
-# Base64로 인코딩 후 WSL 내부에서 실행
+# Encode to Base64 and execute inside WSL
 $bytes = [System.Text.Encoding]::UTF8.GetBytes(($initScript -replace "`r`n","`n").Replace("`r","`n"))
 $b64   = [Convert]::ToBase64String($bytes)
 
 $bashCmd = "base64 -d > /tmp/init.sh <<< $b64; sed -i 's/\r$//' /tmp/init.sh; chmod +x /tmp/init.sh; bash /tmp/init.sh; rm -f /tmp/init.sh"
 wsl -d "$DistroName" -u root -- bash -lc "$bashCmd"
-Write-OK "내부 초기화 완료"
+Write-OK "Internal initialization complete"
 
-try { wsl --set-default "$DistroName" | Out-Null; Write-OK "기본 배포판으로 설정: $DistroName" } catch { }
+try { wsl --set-default "$DistroName" | Out-Null; Write-OK "Set as default distribution: $DistroName" } catch { }
 wsl --shutdown
-Write-OK "설치 완료!"
-Write-Host "접속: wsl -d $DistroName" -ForegroundColor Green
-Write-Host "초기 비밀번호: 'changeme' (첫 로그인 시 변경 안내)" -ForegroundColor Yellow
+Write-OK "Installation complete!"
+Write-Host "Connect: wsl -d $DistroName" -ForegroundColor Green
+Write-Host "Initial password: 'changeme' (you will be prompted to change on first login)" -ForegroundColor Yellow
