@@ -18,8 +18,8 @@ PS C:\workspace\wsl\rocky> .\Install-RockyWSL.ps1
 ```powershell
 [CmdletBinding()]
 param(
-  # "9" or "8" → latest pub path
-  # "9.6", "9.4", "8.10" → fixed vault path
+  # RockeyLinux version "9" or "8" → latest pub path
+  # RockeyLinux version "9.6", "9.4", "8.10" → fixed vault path
   [string]$RockyVersion = "9",
 
   [ValidateSet("Base","Minimal","UBI")]
