@@ -25,9 +25,9 @@ param(
   [ValidateSet("Base","Minimal","UBI")]
   [string]$Variant = "Base",
 
-  [string]$DistroName = "RockyLinux",
+  [string]$DistroName = "Rocky9",
 
-  [string]$InstallPath = "C:\WSL\Rocky",
+  [string]$InstallPath = "C:\WSL\Rocky9",
 
   [string]$Username = "rocky",
 
