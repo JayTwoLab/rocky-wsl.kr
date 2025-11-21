@@ -18,16 +18,16 @@ PS C:\workspace\wsl\rocky> .\Install-RockyWSL.ps1
 ```powershell
 [CmdletBinding()]
 param(
-  # "9" 또는 "8" → 최신 pub 경로
-  # "9.6", "9.4", "8.10" → 고정 vault 경로
+  # 로키 리눅스 버전 "9" 또는 "8" → 최신 pub 경로
+  # 로키 리눅스 버전 "9.6", "9.4", "8.10" → 고정 vault 경로
   [string]$RockyVersion = "9",
 
   [ValidateSet("Base","Minimal","UBI")]
   [string]$Variant = "Base",
 
-  [string]$DistroName = "RockyLinux",
+  [string]$DistroName = "Rocky9",
 
-  [string]$InstallPath = "C:\WSL\Rocky",
+  [string]$InstallPath = "C:\WSL\Rocky9",
 
   [string]$Username = "rocky",
 
